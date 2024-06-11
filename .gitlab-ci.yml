@@ -1,0 +1,115 @@
+variables:
+  LS_CI_REPOS: "gitlab.zen5ops.com/operations/gitlab-ci.git"
+  INIT_PATH: "gitlab-ci/init.sh"
+  LS_BUILD_IMAGE: "gitlab-ci/build_image.sh"
+  LS_GROUP_NAME: ""                      #部署仓库组名称，默认不用设置，默认值为当前工程的组名称
+  LS_PROJECT_NAME: "azmesh-gateway-wechat"                    #部署仓库名称，默认不用设置，默认值为当前工程的名称
+  LS_DOCKERFILE_NAME: ""                 #Dockerfile文件名称，如果Dockerfile文件在当前工程的根目录，不用设置，默认值为Dockerfile
+
+stages:
+  - container
+  - testing
+  - QA
+  - ops
+  - release
+  - version
+
+build_image:
+  image: harbor.zen5ops.com/operations/docker:20.10.16
+  stage: container
+  needs: []
+  when: manual
+  tags:
+    - linux
+  before_script:
+    - git clone --branch main "https://$LS_GITLAB_USER:$LS_GITLAB_PASSWORD@$LS_CI_REPOS"    #$LS_GITLAB_USER和$LS_GITLAB_PASSWORD不用开发设置
+    - . $LS_BUILD_IMAGE
+  script:
+    - ci_build_image
+  only:
+    - tags
+
+test:
+  image: harbor.zen5ops.com/operations/centos:0.0.4
+  stage: testing
+  tags:
+    - linux
+  before_script:
+    - git clone --branch main "https://$LS_GITLAB_USER:$LS_GITLAB_PASSWORD@$LS_CI_REPOS"
+    - . $INIT_PATH
+  script:
+    - ci_deploy_test
+  needs: []
+  only:
+    - tags
+  when: manual
+  environment:
+    name: test
+    url: https://gitlab.zen5ops.com
+
+verify:
+  image: harbor.zen5ops.com/operations/centos:0.0.4
+  stage: QA
+  when: manual
+  needs: []
+  tags:
+    - linux
+  before_script:
+    - git clone --branch main "https://$LS_GITLAB_USER:$LS_GITLAB_PASSWORD@$LS_CI_REPOS"
+    - . $INIT_PATH
+  script:
+    - ci_qa_verify
+  only:
+    - tags
+
+ops_review_release:                                                        # 新增加的job*************************************************************************************
+  image: harbor.zen5ops.com/operations/centos:0.0.4
+  stage: ops
+  tags:
+    - linux
+  before_script:
+    - git clone --branch main "https://$LS_GITLAB_USER:$LS_GITLAB_PASSWORD@$LS_CI_REPOS"
+    - . $INIT_PATH
+  script:
+    - ci_ops_review_release
+  needs: []
+  only:
+    - tags
+  when: manual
+
+prod:
+  image: harbor.zen5ops.com/operations/centos:0.0.4
+  stage: release
+  tags:
+    - linux
+  before_script:
+    - git clone --branch main "https://$LS_GITLAB_USER:$LS_GITLAB_PASSWORD@$LS_CI_REPOS"
+    - . $INIT_PATH
+  script:
+    - ci_deploy_prod
+  when: manual
+  needs: []
+  only:
+    - tags
+  environment:
+    name: prod
+    url: https://gitlab.zen5ops.com
+
+rollback:
+  image: harbor.zen5ops.com/operations/centos:0.0.4
+  stage: version
+  tags:
+    - linux
+  before_script:
+    - git clone --branch main "https://$LS_GITLAB_USER:$LS_GITLAB_PASSWORD@$LS_CI_REPOS"
+    - . $INIT_PATH
+  script:
+    - ci_version_rollback
+  when: manual
+  needs:
+    - prod
+  only:
+    - tags
+  environment:
+    name: prod
+    url: https://gitlab.zen5ops.com
