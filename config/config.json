@@ -6,9 +6,9 @@
   ],
 
   "apps": [{
-    "name": "smart-youai.zen5tech.com",
-    "provider": "wechat",
-    "appid": "wx013c0f1c14feb724",
-    "appsecret": "01a6042f3f7ccde0d404c3cc54fb0c9f"
+    "name": "",
+    "provider": "",
+    "appid": "",
+    "appsecret": ""
   }]
 }
